@@ -3,16 +3,9 @@
 FastAPI service that owns the sailing physics. The Next.js frontend caches the
 polar curve from this service and runs its own animation loop.
 
-This directory lives under `frontend/` so it ships in the same Vercel project.
-Locally it runs as a normal `uvicorn` process; in production
-[../api/index.py](../api/index.py) imports `app.routes:router` and mounts it
-under `/api/*` on the Vercel serverless function. `uvicorn` is **not** used in
-production - Vercel provides the ASGI runtime.
-
 ## Setup
 
 ```bash
-# from frontend/server
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -24,10 +17,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Open <http://localhost:8000/docs> for interactive API docs. In local dev,
-routes live at the root (`/polar`, `/step`, ...) and the Next.js dev server
-rewrites `/api/*` -> `http://127.0.0.1:8000/*`, so the frontend can use the
-same `/api/...` URLs in dev and production.
+Open <http://localhost:8000/docs> for interactive API docs.
 
 ## Tests
 
@@ -42,6 +32,21 @@ pytest
   - returns a sampled polar (TWA -> speed at optimal trim).
 - `POST /step` - one physics tick: TWA, boat speed, optimal trim, apparent wind.
 - `POST /simulate` - server-side replay of N ticks at fixed heading + trim.
+
+## Deployment
+
+Deploy this service on a host that runs long-lived ASGI processes:
+[Render](https://render.com), [Fly.io](https://fly.io),
+[Railway](https://railway.app), or similar. The same `uvicorn` command you use
+locally works in production - just bind to `0.0.0.0` and the host's `$PORT`:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Build command on every platform: `pip install -r requirements.txt`. Once
+deployed, set `BACKEND_URL` on the Vercel frontend project to the resulting
+URL so its `/api/*` rewrite points here.
 
 ## Physics summary
 

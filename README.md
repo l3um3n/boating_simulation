@@ -33,10 +33,10 @@ a fresh polar from the backend.
 
 You need Python 3.11+ and Node 18+.
 
-### Backend (local dev)
+### Backend
 
 ```bash
-cd frontend/server
+cd backend
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -72,46 +72,38 @@ development.
 
 ## Project layout
 
-The Next.js app and the Python backend share a single Vercel project. Vercel
-needs everything it deploys to live under one root, so the Python code lives
-inside `frontend/`:
+- [backend/](backend/) - FastAPI service. See [backend/README.md](backend/README.md).
+- [frontend/](frontend/) - Next.js app. See [frontend/README.md](frontend/README.md).
 
-- [frontend/](frontend/) - Next.js app (Vercel project root).
-  - [frontend/app/](frontend/app/) - React components and lib.
-  - [frontend/api/index.py](frontend/api/index.py) - Vercel Python serverless
-    function. Mounts the FastAPI router under `/api/*`.
-  - [frontend/server/](frontend/server/) - FastAPI source. Run with `uvicorn`
-    locally; bundled into the Vercel function via `includeFiles`.
-  - [frontend/requirements.txt](frontend/requirements.txt) - production
-    Python deps for the Vercel function.
-  - [frontend/vercel.json](frontend/vercel.json) - rewrites + function config.
+## Deployment
 
-## Deployment (Vercel)
+Deploy the two halves to separate hosts. Vercel's newer Python runtime treats
+any `requirements.txt` containing `fastapi` as a standalone FastAPI project,
+which conflicts with hosting a Next.js app in the same Vercel project. Split
+deployment is cleaner and what each platform is built for.
 
-Single Vercel project, frontend + Python serverless function in one deploy.
+### Frontend on Vercel
 
-1. In the Vercel dashboard, set **Root Directory** to `frontend` and
-   **Framework Preset** to `Next.js`. Clear any Production Overrides; the
-   defaults work because [frontend/vercel.json](frontend/vercel.json)
-   handles routing.
-2. `/api/*` is rewritten to `frontend/api/index.py`, which mounts the FastAPI
-   router under `/api`. Same-origin so no CORS config required.
-3. The Python function bundle includes [frontend/server/](frontend/server/)
-   via `functions["api/index.py"].includeFiles` in `vercel.json`.
-4. [frontend/requirements.txt](frontend/requirements.txt) holds runtime deps
-   (`fastapi`, `pydantic`). `uvicorn` and `pytest` are intentionally only in
-   [frontend/server/requirements.txt](frontend/server/requirements.txt) since
-   they are not needed in the serverless runtime.
+1. Vercel dashboard → Settings → General → **Root Directory**: `frontend`,
+   **Framework Preset**: `Next.js`.
+2. Clear any Production Overrides; defaults work.
+3. Set environment variable `BACKEND_URL` to the deployed backend URL
+   (e.g. `https://boating-api.fly.dev`). [frontend/next.config.js](frontend/next.config.js)
+   uses it to server-side-rewrite `/api/*` so the browser sees same-origin
+   requests (no CORS needed).
 
-Caveats: Hobby plan caps each request at 10s and 1024 MB. The simulator only
-calls `/polar` (cached) and `/step` occasionally, so this is comfortable.
-There are no WebSockets and no persistent server state - the design is
-already stateless, so this fits the serverless model.
+### Backend on Render / Fly.io / Railway
+
+These support long-running ASGI processes natively and run `uvicorn` the same
+way you do locally. Use `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+as the start command, and `pip install -r requirements.txt` as the build
+command. After deploying, copy the resulting URL into the Vercel project's
+`BACKEND_URL` env var and redeploy the frontend.
 
 ## Physics summary
 
 A simplified-but-physically-reasonable model in
-[frontend/server/app/physics.py](frontend/server/app/physics.py):
+[backend/app/physics.py](backend/app/physics.py):
 
 - A no-go zone directly upwind where boat speed is zero.
 - A skewed bell-shaped speed-vs-TWA curve peaking on a broad reach.
@@ -119,8 +111,7 @@ A simplified-but-physically-reasonable model in
 - Size scaling: bigger sail = faster, bigger hull = slower.
 - Vector apparent wind: `apparent = true_wind - boat_velocity`.
 
-15 unit tests in
-[frontend/server/tests/test_physics.py](frontend/server/tests/test_physics.py)
+15 unit tests in [backend/tests/test_physics.py](backend/tests/test_physics.py)
 cover the qualitative shape of the model (no-go returns 0, broad reach is
 fastest, more wind = more speed, optimal trim beats bad trim, apparent wind
 math, etc.).
