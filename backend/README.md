@@ -19,6 +19,15 @@ uvicorn app.main:app --reload --port 8000
 
 Open <http://localhost:8000/docs> for interactive API docs.
 
+In local dev, routes live at the root (`/polar`, `/step`, ...). The Next.js
+dev server rewrites `/api/*` -> `http://127.0.0.1:8000/*` so the frontend can
+use the same `/api/...` URLs in dev and production.
+
+In production on Vercel, the same router is mounted under `/api` by
+[../api/index.py](../api/index.py), so requests hit `/api/polar`, `/api/step`,
+etc. directly. `uvicorn` is **not** used in production - Vercel provides the
+ASGI runtime.
+
 ## Tests
 
 ```bash

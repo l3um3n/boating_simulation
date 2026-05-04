@@ -72,8 +72,32 @@ development.
 
 ## Project layout
 
-- [backend/](backend/) - FastAPI service. See [backend/README.md](backend/README.md).
+- [backend/](backend/) - FastAPI service. Run with `uvicorn` for local dev.
+  See [backend/README.md](backend/README.md).
 - [frontend/](frontend/) - Next.js app. See [frontend/README.md](frontend/README.md).
+- [api/index.py](api/index.py) - Vercel serverless entry point that reuses the
+  backend router under `/api/*`. Used in production only.
+
+## Deployment (Vercel)
+
+The Next.js frontend and the FastAPI backend deploy to a single Vercel
+project. Frontend builds via the Next.js framework preset; the Python file at
+`api/index.py` is auto-detected as a serverless function.
+
+1. In the Vercel dashboard, set the project's **Root Directory** to the repo
+   root (NOT `frontend/`). Build/install commands are pinned in
+   [vercel.json](vercel.json).
+2. Vercel auto-installs root [requirements.txt](requirements.txt) for the
+   Python function. `uvicorn` and `pytest` are intentionally only in
+   [backend/requirements.txt](backend/requirements.txt) since they are not
+   needed in the serverless runtime.
+3. `/api/*` requests are rewritten to `api/index.py`, where the FastAPI
+   router is mounted under `/api`. Same-origin so no CORS config required.
+
+Caveats: Hobby plan caps each request at 10s and 1024 MB. The simulator only
+calls `/polar` (cached) and `/step` occasionally, so this is comfortable.
+There are no WebSockets and no persistent server state - the design is
+already stateless, so this fits the serverless model.
 
 ## Physics summary
 
