@@ -15,9 +15,11 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3000>. The frontend proxies `/api/*` to the backend
-configured by `BACKEND_URL` (defaults to `http://127.0.0.1:8000`) - see
-[next.config.js](next.config.js).
+Open <http://localhost:3000>. In dev the frontend proxies `/api/*` to the
+backend configured by `BACKEND_URL` (defaults to `http://127.0.0.1:8000`) -
+see [next.config.js](next.config.js). In production on Vercel, `/api/*` is
+served by [api/index.py](api/index.py), which imports the FastAPI router from
+[server/app](server/app) and mounts it under `/api`.
 
 ## Controls
 

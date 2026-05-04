@@ -3,9 +3,16 @@
 FastAPI service that owns the sailing physics. The Next.js frontend caches the
 polar curve from this service and runs its own animation loop.
 
+This directory lives under `frontend/` so it ships in the same Vercel project.
+Locally it runs as a normal `uvicorn` process; in production
+[../api/index.py](../api/index.py) imports `app.routes:router` and mounts it
+under `/api/*` on the Vercel serverless function. `uvicorn` is **not** used in
+production - Vercel provides the ASGI runtime.
+
 ## Setup
 
 ```bash
+# from frontend/server
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -17,16 +24,10 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Open <http://localhost:8000/docs> for interactive API docs.
-
-In local dev, routes live at the root (`/polar`, `/step`, ...). The Next.js
-dev server rewrites `/api/*` -> `http://127.0.0.1:8000/*` so the frontend can
-use the same `/api/...` URLs in dev and production.
-
-In production on Vercel, the same router is mounted under `/api` by
-[../api/index.py](../api/index.py), so requests hit `/api/polar`, `/api/step`,
-etc. directly. `uvicorn` is **not** used in production - Vercel provides the
-ASGI runtime.
+Open <http://localhost:8000/docs> for interactive API docs. In local dev,
+routes live at the root (`/polar`, `/step`, ...) and the Next.js dev server
+rewrites `/api/*` -> `http://127.0.0.1:8000/*`, so the frontend can use the
+same `/api/...` URLs in dev and production.
 
 ## Tests
 
